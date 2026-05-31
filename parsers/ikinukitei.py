@@ -45,9 +45,7 @@ def parse_date(text: str) -> datetime | None:
         except ValueError:
             pass
 
-        print("URL:", response.url)
-        print("STATUS:", response.status_code)
-        print(response.text[:2000])
+
 
     return None
 
@@ -56,12 +54,24 @@ def parse():
 
     response = requests.get(
         URL,
-        headers=HEADERS,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0 Safari/537.36"
+            ),
+            "Accept-Language": "ja,en;q=0.9"
+        },
         timeout=30
     )
 
+print("FINAL URL:", response.url)
+print("STATUS:", response.status_code)
+
     response.raise_for_status()
 
+    with open("debug.html", "w", encoding="utf-8") as f:
+        f.write(response.text)
     soup = BeautifulSoup(
         response.text,
         "lxml"
