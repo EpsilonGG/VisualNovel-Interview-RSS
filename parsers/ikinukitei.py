@@ -7,10 +7,8 @@ from bs4 import BeautifulSoup
 from models.item import Item
 
 
-URL = (
-    "https://ikinukitei.dmm.co.jp/"
-    "article/category/selection/"
-)
+URL = "https://ikinukitei.dmm.co.jp/article/category/selection/"
+
 
 HEADERS = {
     "User-Agent": (
@@ -18,7 +16,8 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0 Safari/537.36"
     ),
-    "Accept-Language": "ja,en;q=0.9"
+    "Accept-Language": "ja,en;q=0.9",
+    "Referer": "https://www.dmm.co.jp/"
 }
 
 
@@ -48,32 +47,45 @@ def parse_date(text: str) -> datetime | None:
     return None
 
 
-def parse():
+def fetch_html():
+
     session = requests.Session()
 
+    session.headers.update(HEADERS)
+
+    # 关键：模拟正常用户先访问主站
+    try:
+        session.get(
+            "https://www.dmm.co.jp/",
+            timeout=30
+        )
+    except Exception:
+        pass
+
+    # 关键 cookie（弱但有效）
     session.cookies.set(
         "age_check_done",
         "1",
         domain=".dmm.co.jp"
     )
 
-    response = requests.get(
+    response = session.get(
         URL,
-        headers=HEADERS,
         timeout=30
     )
 
-    # ✅ 必须在函数内部
     print("FINAL URL:", response.url)
     print("STATUS:", response.status_code)
 
-    response.raise_for_status()
+    return response.text
 
-    with open("debug.html", "w", encoding="utf-8") as f:
-        f.write(response.text)
+
+def parse():
+
+    html = fetch_html()
 
     soup = BeautifulSoup(
-        response.text,
+        html,
         "lxml"
     )
 
@@ -104,10 +116,7 @@ def parse():
 
             title = title_el.get_text(strip=True)
 
-            link = title_el.get(
-                "href",
-                ""
-            )
+            link = title_el.get("href", "")
 
             description = title
 
@@ -115,10 +124,7 @@ def parse():
 
             if date_el:
 
-                raw_date = date_el.get(
-                    "datetime",
-                    ""
-                )
+                raw_date = date_el.get("datetime", "")
 
                 pub_date = parse_date(raw_date)
 
