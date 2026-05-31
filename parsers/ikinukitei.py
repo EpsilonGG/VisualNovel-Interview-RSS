@@ -45,6 +45,10 @@ def parse_date(text: str) -> datetime | None:
         except ValueError:
             pass
 
+        print("URL:", response.url)
+        print("STATUS:", response.status_code)
+        print(response.text[:2000])
+
     return None
 
 
