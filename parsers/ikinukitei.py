@@ -49,6 +49,13 @@ def parse_date(text: str) -> datetime | None:
 
 
 def parse():
+    session = requests.Session()
+
+    session.cookies.set(
+        "age_check_done",
+        "1",
+        domain=".dmm.co.jp"
+    )
 
     response = requests.get(
         URL,
