@@ -44,7 +44,7 @@ RSS 渲染器 (Aggregator) ──> 将新鲜放行的文章打包，输出为标
 
 ```
 VisualNovel-Interview-RSS/
-├── .github/workflows/   # 【自动化工厂】配置云端定时自动抓取与失效检测的任务
+├── .github/workflows/  # 【自动化工厂】配置云端定时自动抓取与失效检测的任务
 ├── models/             # 【标准模型】定义了一篇文章必须包含哪些基础信息，确保数据不乱套
 ├── parsers/            # 【核心解析器】存放针对各个媒体网站的专属抓取规则（核心开发区）
 ├── storage/            # 【数据仓库】存放历史记录文件 history.json，用于防重复
@@ -52,6 +52,8 @@ VisualNovel-Interview-RSS/
 ├── main.py             # 【中央调度器】程序的总入口，负责拉通整个抓取流
 └── requirements.txt    # 【依赖清单】运行本项目所需的 Python 扩展包列表
 ```
+
+
 # 🚀 快速上手指南（面向无编程基础用户）
 借助于 GitHub 提供的免费自动化能力，您不需要在自己的电脑上安装任何开发软件，即可拥有这个专属于您的订阅源。
 
@@ -77,6 +79,8 @@ VisualNovel-Interview-RSS/
 
 如果您希望支持更多好网站，欢迎在 parsers/ 下参照 base_parser.py 实现新的解析器，并提交 Pull Request！
 
+Tips:可先在 https://createfeed.fivefilters.org/index.php 输入感兴趣的网页，部分可自动获得相关参数。再复制网站、相关参数和本project到大模型，实现新的解析器。
+
 # 核心项目结构快照
 ```
 VisualNovel-Interview-RSS/
@@ -84,12 +88,11 @@ VisualNovel-Interview-RSS/
 │   └── workflows/
 │       └── update_feeds.yml       # 自动化定时触发与状态监控工作流
 ├── models/
-│   ├── __init__.py
 │   └── item.py                    # 核心数据模型（标准信息承载实体）
 ├── parsers/
 │   ├── __init__.py
-│   ├── base_parser.py             # 解析器抽象基类（定义统一行为契约）
-│   └── gamespark_interview.py     # 针对特定媒体的具体 HTML 结构解析器
+│   ├── base_parser.txt            # 解析器抽象基类（定义统一行为契约）
+│   └── interview_site.py          # 针对特定媒体的具体 HTML 结构解析器
 ├── storage/
 │   └── history.json               # 增量去重持久化数据仓库（历史指纹库）
 ├── tools/
