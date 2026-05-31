@@ -13,7 +13,12 @@ URL = (
 )
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0 Safari/537.36"
+    ),
+    "Accept-Language": "ja,en;q=0.9"
 }
 
 
@@ -33,19 +38,12 @@ def parse_date(text: str) -> datetime | None:
 
         try:
 
-            dt = datetime.strptime(
-                text,
-                fmt
-            )
+            dt = datetime.strptime(text, fmt)
 
-            return dt.astimezone(
-                timezone.utc
-            )
+            return dt.astimezone(timezone.utc)
 
         except ValueError:
             pass
-
-
 
     return None
 
@@ -54,24 +52,19 @@ def parse():
 
     response = requests.get(
         URL,
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0 Safari/537.36"
-            ),
-            "Accept-Language": "ja,en;q=0.9"
-        },
+        headers=HEADERS,
         timeout=30
     )
 
-print("FINAL URL:", response.url)
-print("STATUS:", response.status_code)
+    # ✅ 必须在函数内部
+    print("FINAL URL:", response.url)
+    print("STATUS:", response.status_code)
 
     response.raise_for_status()
 
     with open("debug.html", "w", encoding="utf-8") as f:
         f.write(response.text)
+
     soup = BeautifulSoup(
         response.text,
         "lxml"
@@ -102,9 +95,7 @@ print("STATUS:", response.status_code)
                 ".image"
             )
 
-            title = title_el.get_text(
-                strip=True
-            )
+            title = title_el.get_text(strip=True)
 
             link = title_el.get(
                 "href",
@@ -122,12 +113,9 @@ print("STATUS:", response.status_code)
                     ""
                 )
 
-                pub_date = parse_date(
-                    raw_date
-                )
+                pub_date = parse_date(raw_date)
 
                 if pub_date is None:
-
                     print(
                         "[Ikinukitei] Date parse failed:",
                         repr(raw_date)
@@ -137,10 +125,7 @@ print("STATUS:", response.status_code)
 
             if image_el:
 
-                style = image_el.get(
-                    "style",
-                    ""
-                )
+                style = image_el.get("style", "")
 
                 match = re.search(
                     r'url\((.*?)\)',
@@ -148,12 +133,7 @@ print("STATUS:", response.status_code)
                 )
 
                 if match:
-
-                    image_url = (
-                        match.group(1)
-                        .strip('"')
-                        .strip("'")
-                    )
+                    image_url = match.group(1).strip('"').strip("'")
 
             items.append(
                 Item(
