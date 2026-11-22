@@ -1,4 +1,3 @@
-import re
 from datetime import datetime, timezone
 from urllib.parse import urljoin
 
@@ -14,9 +13,9 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
-
 DATE_FORMATS = [
     "%Y-%m-%d %H:%M",
+    "%Y-%m-%d",
 ]
 
 
@@ -61,85 +60,75 @@ def parse():
         "lxml"
     )
 
-    articles = soup.select(
-        "li[class*='ArticleList_listItem']"
-    )
+    # 不用哈希化后的 class 名做定位：只认语义结构与文章链接
+    main = soup.select_one("main") or soup
+
+    articles = main.select("li")
 
     items = []
+    seen = set()
 
     for article in articles:
 
         try:
 
-            title_el = article.select_one(
-                "[class*='ArticleCard_title']"
+            link_el = article.select_one(
+                'a[href*="/article/"]'
             )
 
-            if not title_el:
+            # 有 <time> 的才是栏目正文；编辑推荐位/广告没有发布时间
+            date_el = article.select_one("time")
+
+            if not link_el or not date_el:
                 continue
 
+            title_el = article.select_one("p")
+
+            title = (
+                title_el.get_text(strip=True)
+                if title_el
+                else link_el.get_text(" ", strip=True)
+            )
+
+            link = urljoin(
+                "https://dengekionline.com",
+                link_el.get("href", "")
+            )
+
+            if "osusume_banner" in link or link in seen:
+                continue
+
+            seen.add(link)
+
             desc_el = article.select_one(
-                "[class*='ArticleCard_description']"
+                '[class*="description"]'
             )
 
-            link_el = article.select_one(
-                "a[class*='ArticleCard_card']"
+            description = (
+                desc_el.get_text(" ", strip=True)
+                if desc_el
+                else title
             )
 
-            date_el = article.select_one(
-                "[class*='ArticleCard_time']"
-            )
-
-            img_el = article.select_one(
-                "img"
-            )
-
-            title = title_el.get_text(
+            raw_date = date_el.get_text(
+                " ",
                 strip=True
             )
 
-            link = ""
+            pub_date = parse_date(
+                raw_date
+            )
 
-            if link_el:
+            if pub_date is None:
 
-                link = urljoin(
-                    "https://dengekionline.com",
-                    link_el.get("href", "")
+                print(
+                    "[Dengeki Online] Date parse failed:",
+                    repr(raw_date)
                 )
-
-            description = ""
-
-            if desc_el:
-
-                description = desc_el.get_text(
-                    " ",
-                    strip=True
-                )
-
-            if not description:
-                description = title
-
-            pub_date = None
-
-            if date_el:
-
-                raw_date = date_el.get_text(
-                    " ",
-                    strip=True
-                )
-
-                pub_date = parse_date(
-                    raw_date
-                )
-
-                if pub_date is None:
-
-                    print(
-                        "[Dengeki Online] Date parse failed:",
-                        repr(raw_date)
-                    )
 
             image_url = ""
+
+            img_el = article.select_one("img")
 
             if img_el:
 

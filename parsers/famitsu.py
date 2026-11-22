@@ -18,12 +18,19 @@ HEADERS = {
     )
 }
 
+ABSOLUTE_FORMATS = [
+    "%Y.%m.%d %H:%M",
+    "%Y.%m.%d",
+    "%Y年%m月%d日 %H:%M",
+    "%Y年%m月%d日",
+]
+
 
 def parse_relative_date(text: str) -> datetime | None:
 
     text = text.strip()
 
-    now = datetime.now()
+    now = datetime.now().replace(microsecond=0)
 
     if text == "昨日":
         return now - timedelta(days=1)
@@ -67,6 +74,13 @@ def parse_relative_date(text: str) -> datetime | None:
         if unit == "years":
             return now - timedelta(days=value * 365)
 
+    for fmt in ABSOLUTE_FORMATS:
+
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            pass
+
     return None
 
 
@@ -85,69 +99,83 @@ def parse():
         "lxml"
     )
 
-    articles = soup.select(
-        "div[class*='PrimaryCard_cardContainer'], "
-        "div[class*='SecondaryCard_card']"
-    )
+    # 不依赖哈希化 class：只取 main 里有 <time> 的列表卡片
+    main = soup.select_one("main") or soup
 
     items = []
+    seen = set()
 
-    for article in articles:
+    for card in main.select("li"):
 
         try:
 
-            title_el = article.select_one(
-                'a[class*="title"]'
+            # 原生广告位和推荐位没有发布时间，先按结构排除
+            date_el = card.select_one("time")
+
+            if not date_el:
+                continue
+
+            # 已知广告卡片再按稳定 class 兜一次
+            if card.select_one(
+                ".ad-native-campaign, [class*='adText']"
+            ):
+                continue
+
+            # 标题取卡片里文字最长的文章链接，不用哈希 class
+            anchors = [
+                a
+                for a in card.select('a[href*="/article/"]')
+                if len(a.get_text(strip=True)) >= 15
+            ]
+
+            title_el = (
+                max(
+                    anchors,
+                    key=lambda a: len(a.get_text(strip=True))
+                )
+                if anchors
+                else None
             )
 
             if not title_el:
                 continue
-
-            desc_el = article.select_one(
-                'a[class*="lead"]'
-            )
-
-            date_el = article.select_one(
-                'div[class*="date"] time'
-            )
-
-            img_el = article.select_one(
-                'div[class*="media"] img'
-            )
-
-            title = title_el.get_text(
-                strip=True
-            )
 
             link = urljoin(
                 "https://www.famitsu.com",
                 title_el.get("href", "")
             )
 
-            description = ""
+            if "/article/" not in link or link in seen:
+                continue
 
-            if desc_el:
-                description = desc_el.get_text(
-                    " ",
-                    strip=True
-                )
+            seen.add(link)
 
-            if not description:
-                description = title
+            title = title_el.get_text(
+                strip=True
+            )
 
-            pub_date = None
+            desc_el = card.select_one(
+                'a[class*="lead"]'
+            )
 
-            if date_el:
+            description = (
+                desc_el.get_text(" ", strip=True)
+                if desc_el
+                else title
+            )
 
-                raw_date = date_el.get_text(
-                    strip=True
-                )
+            raw_date = (
+                date_el.get("datetime")
+                or date_el.get_text(strip=True)
+            )
 
-                pub_date = parse_relative_date(
-                    raw_date
-                )
+            pub_date = parse_relative_date(
+                raw_date
+            )
 
             image_url = ""
+
+            img_el = card.select_one("img")
 
             if img_el:
 
